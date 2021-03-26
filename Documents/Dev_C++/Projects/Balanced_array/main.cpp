@@ -7,11 +7,10 @@
 
 int main() {
 	int i, j, p, t, n1, *n, k=0;
-	int **a;
+	int *a;
 	scanf("%d", &t);
 	clock_t start = clock();
 	n = (int*) malloc (t*sizeof(int));
-	a = (int**) malloc (t*sizeof(int*));
 	for(i=0; i<t; i++)
 		scanf("%d", &n[i]);
 	for(i=0; i<t; i++)
@@ -20,20 +19,20 @@ int main() {
 			printf("NO\n");
 		else
 			{
-				a[i] = (int*) malloc (n[i]*sizeof(int));
+				a = (int*) malloc (n[i]*sizeof(int));
 				printf("YES\n");
 				n1 = n[i];
 				k = n[i]/2;
-				a[i][0] = 2;
-				a[i][k] = 1;
+				a[0] = 2;
+				a[k] = 1;
 				for(j=1, p=k+1; ((j<k) && (p<n1)); j++, p++)
 				{				
-					a[i][j] = a[i][j-1] + 2;
-					a[i][p] = a[i][p-1] + 2;
+					a[j] = a[j-1] + 2;
+					a[p] = a[p-1] + 2;
 				}
-				a[i][n1-1] = a[i][k-1] + (k-1);
+				a[n1-1] = a[k-1] + (k-1);
 				for (j=0; j<n1; j++)
-					printf("%d ", a[i][j]);
+					printf("%d ", a[j]);
 				printf("\n");
 			}
 	}
