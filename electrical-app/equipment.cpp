@@ -12,6 +12,18 @@ Equipment::Equipment():
     cost()
 {}
 
+Equipment::Equipment(unsigned int iId):
+    nameOfEquipment(),
+    typeOfEquipment(),
+    perfomance(),
+    power(),
+    dateOfBuy(),
+    dateOfUse(),
+    cost()
+{
+    (iId == 0) ? id = 1 : id = iId;
+}
+
 Equipment::Equipment(unsigned int iId, QString iNameOfEquipment, QString iTypeOfEquipment,\
                      float iPerfomance, float iPower, QString iDateOfBuy, QString iDateOfUse,\
                      unsigned int iCost):

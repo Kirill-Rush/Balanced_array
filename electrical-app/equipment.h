@@ -27,6 +27,7 @@ private:
     unsigned int cost; // стоимость
 public:
     Equipment();
+    Equipment(unsigned int iId);
     Equipment(unsigned int iId, QString iNameOfEquipment, QString iTypeOfEquipment,\
               float iPerfomance, float iPower, QString iDateOfBuy, QString iDateOfUse,\
               unsigned int iCost);

@@ -5,5 +5,13 @@
         <file>images/SAVE_AS.png</file>
         <file>images/SAVE.png</file>
         <file>images/SEARCH.png</file>
+        <file>images/TRASH.png</file>
+        <file>images/EDIT.png</file>
+        <file>images/NEW.png</file>
+        <file>images/ADD_ROW.svg.png</file>
+        <file>images/france.png</file>
+        <file>images/great-britain.png</file>
+        <file>images/russian-federation.png</file>
+        <file>images/spain.png</file>
     </qresource>
 </RCC>

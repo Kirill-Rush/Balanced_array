@@ -1,6 +1,9 @@
 #include "tablemodel.h"
 #include <QBrush>
 #include <QDebug>
+#include <QStandardItemModel>
+#include <QTableWidgetItem>
+#include <mainwindow.h>
 
 TableModel::TableModel(QObject *parent) : QAbstractTableModel(parent)
 {}
@@ -62,15 +65,26 @@ bool TableModel::setData(const QModelIndex &index, const QVariant &value, int ro
     if(!index.isValid())
         return false;
 
+    setIsModelChanged(true);
     int column = index.column();
-    int row = index.row();
+    int row = index.row(); 
 
-    if(role == Qt::EditRole)
+    if(role == Qt::EditRole ||  role == Qt::DisplayRole)
     {
         switch(column)
         {
         case 0:
+            if(role == Qt::DisplayRole) // для 1-го захода в метод при drag and drop
+                break;
+
+            if(isIdExist(value.toUInt()))
+            {
+                emit(signalIdError(value.toUInt()));
+                return false;
+            }
+            removeUniqueId(data(index, Qt::DisplayRole).toUInt()); // удаление ID, который будет изменен
             listOfEquipment[row].setId(value.toUInt());
+            addUniqueId(value.toUInt()); // вставка нового ID в вектор уникальных
             break;
         case 1:
             listOfEquipment[row].setNameOfEquipment(value.toString());
@@ -91,17 +105,13 @@ bool TableModel::setData(const QModelIndex &index, const QVariant &value, int ro
             listOfEquipment[row].setDateOfUse(value.toString());
             break;
         case 7:
+            updateCostByTypesMinus(listOfEquipment[row]);
             listOfEquipment[row].setCost(value.toUInt());
+            updateCostByTypesPlus(listOfEquipment[row]);
             break;
         }
         return true;
     }
-
-//        if(column == 0)
-//        {
-//            listStrings.replace(index.row(), value.toString());
-//            return true;
-//        }
 
     return false;
 }
@@ -134,50 +144,119 @@ Qt::ItemFlags TableModel::flags(const QModelIndex &index) const
     if(index.isValid())
         return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled;
     else
-        return Qt::NoItemFlags | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled;
-}
-
-void TableModel::setValueInListOfEquipment(const Equipment &elem)
-{
-    listOfEquipment.append(elem);
-}
-
-//void TableModel::deleteElementFromList(const int &index)
-//{
-//    auto iter = listOfEquipment.begin();
-//    for(int i = 0; iter != listOfEquipment.end() && i < index; iter++, i++);
-//    listOfEquipment.erase(iter);
-//}
-
-QList<Equipment>& TableModel::getListOfEquipment()
-{
-    return listOfEquipment;
+        return Qt::NoItemFlags | Qt::ItemIsDropEnabled;
 }
 
 bool TableModel::removeRows(int row, int count, const QModelIndex &parent)
 {
     Q_UNUSED(parent);
-    emit(beginRemoveRows(QModelIndex(), row, row+count-1));
+    emit(beginRemoveRows(QModelIndex(), row, row));
     for (int i=0; i < count; i++)
-        listOfEquipment.removeAt(row);
+    {
+        updateCostByTypesMinus(listOfEquipment.at(row + i));
+        uniqueIds.remove(uniqueIds.indexOf(listOfEquipment.at(row + i).getId()));
+        listOfEquipment.removeAt(row + i);
+    }
     emit(endRemoveRows());
+    isModelChanged = true;
     return true;
 }
 
 bool TableModel::insertRows(int row, int count, const QModelIndex &parent)
 {
     Q_UNUSED(count);
-    beginInsertRows(parent, row, row);
-    Equipment newElement;
+    emit(beginInsertRows(parent, row, row));
+    unsigned int id = searchFreeId();
+    Equipment newElement(id);
     listOfEquipment.append(newElement);
+    addUniqueId(id);
     emit(endInsertRows());
+    isModelChanged = true;
     return true;
 }
+
+void TableModel::updateCostByTypesPlus(const Equipment &elem)
+{
+    costByTypes[elem.getTypeOfEquipment()] += elem.getCost();
+}
+
+void TableModel::updateCostByTypesMinus(const Equipment &elem)
+{
+    costByTypes[elem.getTypeOfEquipment()] -= elem.getCost();
+}
+
+bool TableModel::isIdExist(const unsigned int &id)
+{
+    QVector<unsigned int>::iterator it;
+    for(it = uniqueIds.begin(); it != uniqueIds.end(); it++)
+        if(*it == id)
+            return true;
+
+
+    return false;
+}
+
+unsigned int TableModel::searchFreeId()
+{
+    unsigned int sizeOfUniqueIds = uniqueIds.size();
+    std::sort(uniqueIds.begin(), uniqueIds.end());
+    for(unsigned int i = 0; i < sizeOfUniqueIds; i++)
+        if(uniqueIds[i] != i + 1)
+            return i + 1;
+
+    if(sizeOfUniqueIds == 0)
+        return 1;
+    else
+        return uniqueIds[sizeOfUniqueIds - 1] + 1;
+}
+
+void TableModel::addUniqueId(const unsigned int &iId)
+{
+    uniqueIds.append(iId);
+}
+
+void TableModel::removeUniqueId(const unsigned int &idToRemove)
+{
+    if(uniqueIds.contains(idToRemove))
+        uniqueIds.remove(uniqueIds.indexOf(idToRemove));
+}
+
+
+
+void TableModel::setValueInListOfEquipment(const Equipment &elem)
+{
+    listOfEquipment.append(elem);
+    updateCostByTypesPlus(elem);
+    addUniqueId(elem.getId());
+}
+
+void TableModel::setIsModelChanged(bool isChanged)
+{
+    isModelChanged = isChanged;
+}
+
+QList<Equipment>& TableModel::getListOfEquipment()
+{
+    return listOfEquipment;
+}
+
+bool TableModel::getIsModelChanged()
+{
+    return isModelChanged;
+}
+
+QMap<QString, double>& TableModel::getCostByTypes()
+{
+    return costByTypes;
+}
+
+
 
 QStringList TableModel::mimeTypes() const
 {
     QStringList types;
-    types << "application/x-qabstractitemmodeldatalist";
+    types << "application/x-qabstractitemmodeldatalist"
+          << "text/plain";
     return types;
 }
 
@@ -193,10 +272,48 @@ QMimeData *TableModel::mimeData(const QModelIndexList &indexes) const
     if (types.isEmpty())
         return nullptr;
 
-    if(currentMimeType == "application/x-qabstractitemmodeldatalist")
+    if (firstMimeType == "text/plain" && secondMimeType == "application/x-qabstractitemmodeldatalist")
     {
-        qDebug() << "mimeData FUNCTION";
-        return QAbstractItemModel::mimeData(indexes);
+        QString result;
+
+        int topSelectionRange = indexes.at(0).row();
+        int leftSelectionRange = indexes.at(0).column();
+        int rowCountSelectionRange = 0;
+        int columnCountSelectionRange = 0;
+        for (int i = 0; i < indexes.count(); ++i) {
+            // item отсутствует?
+            if (!indexes.at(i).isValid())
+                return nullptr;
+
+            int c = indexes.at(i).column() - leftSelectionRange;
+            int r = indexes.at(i).row() - topSelectionRange;
+
+            if (c > 0 && (c < columnCountSelectionRange || indexes.at(i).row() == topSelectionRange))
+                result += columnDelimiter;
+            if (r > 0 && indexes.at(i).column() == leftSelectionRange) {
+                result += rowDelimiter;
+            }
+            result += quotes +
+                    indexes.at(i).data(Qt::DisplayRole).toString() +
+                    quotes;
+
+            if (indexes.at(i).row() == topSelectionRange)
+                columnCountSelectionRange++;
+            if (indexes.at(i).column() == leftSelectionRange)
+                rowCountSelectionRange++;
+        }
+
+        result += rowDelimiter;
+        qDebug() << result;
+
+        // создаем mimeData, которая будет использоваться для drop
+        QMimeData *mimeData = new QMimeData;
+        // создаем mimeDataForLocal для записи типа и mimeData для внутренних переносов
+        QMimeData *res = QAbstractTableModel::mimeData(indexes);
+        // записываем типы с данными для drop в mimeData
+        mimeData->setData(secondMimeType, res->data(secondMimeType));
+        mimeData->setData(firstMimeType, result.toUtf8());
+        return mimeData;
     }
 
     return nullptr;
@@ -207,12 +324,46 @@ bool TableModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int 
     qDebug() << "dropMimeData FUNCTION";
     if(data == nullptr)
         return false;
-    qDebug() << "dropMimeData FUNCTION";
-    return QAbstractItemModel::dropMimeData(data, action, row, column, parent);
-    //return QTableWidget::dropMimeData(row, column, data, action);
-}
 
-Qt::DropActions TableModel::supportedDropActions() const
-{
-    return Qt::CopyAction | Qt::MoveAction;
+    //QStringList mimeTypesFormats =  data->formats();
+
+    QByteArray dataforsecond = data->data(secondMimeType);
+    QMimeData *forsecond = new  QMimeData;
+    forsecond->setData(secondMimeType, dataforsecond);
+    forsecond->setText(dataforsecond);
+
+    if(data->hasFormat("application/x-qabstractitemmodeldatalist"))
+    {
+        //QModelIndex indexx = index(row, 0);
+        //removeUniqueId(this->data(parent, Qt::DisplayRole).toUInt());
+        return QAbstractTableModel::dropMimeData(forsecond, action, row, column, parent);
+    }
+
+    if (data->hasFormat("text/plain"))
+    {
+        QStringList strings;
+        strings = data->text().split(rowDelimiter);
+
+        for (int rowSelected = 0; rowSelected < strings.count(); ++rowSelected)
+        {
+            if ((row + rowSelected) >= rowCount(parent))
+                insertRow(rowCount(parent));
+            QStringList tokens = strings[rowSelected].split(columnDelimiter);
+            for (int columnSelected = 0; columnSelected < tokens.count(); columnSelected++)
+            {
+                QString token = tokens[columnSelected];
+                token.remove(quotes);
+                if (token.isEmpty())
+                    continue;
+                QAbstractItemModel *item = new TableModel;
+                item->setData(parent, token, Qt::EditRole);
+                QMap<int, QVariant> k;
+                setItemData(item->data(parent, Qt::DisplayRole).toModelIndex(), k);
+                delete item;
+            }
+        }
+        return true;
+    }
+
+    return false;
 }
