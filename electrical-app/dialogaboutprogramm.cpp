@@ -6,8 +6,9 @@ DialogAboutProgramm::DialogAboutProgramm(QWidget *parent) :
     ui(new Ui::DialogAboutProgramm)
 {
     ui->setupUi(this);
+    setFixedSize(380, 180);
     ui->labelAboutProgramm->setText(tr("Programm for accounting electrical equipment \
-                                        at a plastic prcessing plant.\n\nAuthor: Kirill Glebov,  ICTMS-2-7"));
+                                        at a plastic prcessing plant.\n\nAuthor: Glebov Kirill Igorevich,  ICTMS-2-7"));
 }
 
 DialogAboutProgramm::~DialogAboutProgramm()

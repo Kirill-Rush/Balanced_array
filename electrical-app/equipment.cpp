@@ -24,8 +24,13 @@ Equipment::Equipment(unsigned int iId):
     (iId == 0) ? id = 1 : id = iId;
 }
 
-Equipment::Equipment(unsigned int iId, QString iNameOfEquipment, QString iTypeOfEquipment,\
-                     float iPerfomance, float iPower, QString iDateOfBuy, QString iDateOfUse,\
+Equipment::Equipment(unsigned int iId, \
+                     QString iNameOfEquipment, \
+                     QString iTypeOfEquipment,\
+                     float iPerfomance, \
+                     float iPower, \
+                     QString iDateOfBuy, \
+                     QString iDateOfUse,\
                      unsigned int iCost):
     id(iId),
     nameOfEquipment(iNameOfEquipment),
@@ -57,6 +62,8 @@ Equipment::Equipment(unsigned int iId, QString iNameOfEquipment, QString iTypeOf
 
 Equipment::~Equipment()
 {}
+
+
 
 void Equipment::setId(const unsigned int iId)
 {
@@ -114,6 +121,8 @@ void Equipment::setCost(const unsigned int iCost)
 {
     cost = iCost;
 }
+
+
 
 unsigned int Equipment::getId() const
 {

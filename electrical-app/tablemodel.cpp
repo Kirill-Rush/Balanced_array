@@ -192,7 +192,6 @@ bool TableModel::isIdExist(const unsigned int &id)
         if(*it == id)
             return true;
 
-
     return false;
 }
 
@@ -235,6 +234,8 @@ void TableModel::setIsModelChanged(bool isChanged)
     isModelChanged = isChanged;
 }
 
+
+
 QList<Equipment>& TableModel::getListOfEquipment()
 {
     return listOfEquipment;
@@ -252,24 +253,12 @@ QMap<QString, double>& TableModel::getCostByTypes()
 
 
 
-QStringList TableModel::mimeTypes() const
-{
-    QStringList types;
-    types << "application/x-qabstractitemmodeldatalist"
-          << "text/plain";
-    return types;
-}
-
 QMimeData *TableModel::mimeData(const QModelIndexList &indexes) const
 {
     qDebug() << "mimeData FUNCTION";
     if(indexes.isEmpty())
         return nullptr;
     if(!indexes.at(0).isValid())
-        return nullptr;
-
-    QStringList types = mimeTypes();
-    if (types.isEmpty())
         return nullptr;
 
     if (firstMimeType == "text/plain" && secondMimeType == "application/x-qabstractitemmodeldatalist")
@@ -290,9 +279,8 @@ QMimeData *TableModel::mimeData(const QModelIndexList &indexes) const
 
             if (c > 0 && (c < columnCountSelectionRange || indexes.at(i).row() == topSelectionRange))
                 result += columnDelimiter;
-            if (r > 0 && indexes.at(i).column() == leftSelectionRange) {
+            if (r > 0 && indexes.at(i).column() == leftSelectionRange)
                 result += rowDelimiter;
-            }
             result += quotes +
                     indexes.at(i).data(Qt::DisplayRole).toString() +
                     quotes;
@@ -309,9 +297,9 @@ QMimeData *TableModel::mimeData(const QModelIndexList &indexes) const
         // создаем mimeData, которая будет использоваться для drop
         QMimeData *mimeData = new QMimeData;
         // создаем mimeDataForLocal для записи типа и mimeData для внутренних переносов
-        QMimeData *res = QAbstractTableModel::mimeData(indexes);
+        QMimeData *mimeDataForLocal = QAbstractTableModel::mimeData(indexes);
         // записываем типы с данными для drop в mimeData
-        mimeData->setData(secondMimeType, res->data(secondMimeType));
+        mimeData->setData(secondMimeType, mimeDataForLocal->data(secondMimeType));
         mimeData->setData(firstMimeType, result.toUtf8());
         return mimeData;
     }
@@ -334,8 +322,6 @@ bool TableModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int 
 
     if(data->hasFormat("application/x-qabstractitemmodeldatalist"))
     {
-        //QModelIndex indexx = index(row, 0);
-        //removeUniqueId(this->data(parent, Qt::DisplayRole).toUInt());
         return QAbstractTableModel::dropMimeData(forsecond, action, row, column, parent);
     }
 

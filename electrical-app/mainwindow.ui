@@ -200,7 +200,7 @@
      <x>0</x>
      <y>0</y>
      <width>650</width>
-     <height>22</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -228,6 +228,7 @@
     <addaction name="actionEdit_row"/>
     <addaction name="actionAdd_row"/>
     <addaction name="actionDelete_row"/>
+    <addaction name="actionClear_all_table"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -368,6 +369,15 @@
    </property>
    <property name="text">
     <string>Charts</string>
+   </property>
+  </action>
+  <action name="actionClear_all_table">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/pictures/images/clear_table.png</normaloff>:/pictures/images/clear_table.png</iconset>
+   </property>
+   <property name="text">
+    <string>Clear all table</string>
    </property>
   </action>
  </widget>

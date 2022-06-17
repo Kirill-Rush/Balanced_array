@@ -6,14 +6,15 @@
 
 DelegateForValidation::DelegateForValidation(QWidget *parent):
     QStyledItemDelegate(parent)
-{
-
-}
+{}
 
 // установка валидаторов для столбцов
-QWidget *DelegateForValidation::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
+QWidget *DelegateForValidation::createEditor(QWidget *parent, \
+                                             const QStyleOptionViewItem &option, \
+                                             const QModelIndex &index) const
 {
-    QLineEdit * lineEdit = new QLineEdit(parent);
+    Q_UNUSED(option)
+    QLineEdit *lineEdit = new QLineEdit(parent);
     QRegularExpression expr;
     switch(index.column())
     {

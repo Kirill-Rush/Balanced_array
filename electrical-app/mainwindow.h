@@ -1,3 +1,8 @@
+/**
+ * \file Заголовочный файл с описанием класса MainWindow
+ * \author Глебов К.И., ИЦТМС-2-7, МГСУ
+ */
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -19,41 +24,54 @@ QT_END_NAMESPACE
 
 class QActionGroup;
 
+/**
+ * @brief Класс главного окна MainWindow
+ *
+ * Наследуется от класса QMainWindow. Данный класс описывает главное окно программы, в котором находятся основные функции
+ * работы с ней, такие как: открытие/закрытие файла с данными, сохранение данных,
+ * базовые настройки приложения (положение на экране, размер, язык). Обработка
+ * нажатий на функциональные кнопки обрабатываются в данном классе с дальнейшим
+ * обращением к методам других классов
+ */
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
+    /**
+     * @brief Конструктор класса MainWindow
+     * @param parent Указатель на родителя объекта */
+
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    void slotIdError(const unsigned int &id);
+protected:
+    /**
+     * @brief Метод closeEvent ловит нажатие на крестик (закрытие программы)
+     * @param event Указатель на событие закрытия главного окна. Вызывает метод
+     * closeDocument()
+     */
+    void closeEvent(QCloseEvent *event) override; // ловит нажатие на крестик
 
 private slots:
     void openAboutProgramDialog();
-    void saveFile(QString &fileName);
-    void loadFile(QString &fileName);
     void editElement();
     void deleteElement();
     void addElement();
     void menuRequested(QPoint pos);
-    void readSettings();
-    void writeSettings();
-    void closeDocument(); // при его выборе есть возможность сохранить изменения
-    void closeSomeDocuments(); // при его выборе невозможно сохранить изменения
-    //void closeEvent(QCloseEvent *event);
+    void closeDocument(); // ззакрытие документа
+    void closeAllDocuments(); // закрытие всех документов
     void switchLanguage(QAction *action);
-    //void slotIdError(const unsigned int &id);
+    void slotIdError(const unsigned int &id);
 
-    QString getCurrentFileName() const;
-
-    void on_actionSave_triggered();
+    void on_actionNew_triggered();
 
     void on_actionOpen_triggered();
 
-    void on_actionSave_as_triggered();
+    bool on_actionSave_triggered();
 
-    void on_actionNew_triggered();
+    bool on_actionSave_as_triggered();
 
     void on_lineSearch_textChanged(const QString &arg1);
 
@@ -65,8 +83,7 @@ private slots:
 
     void on_actionCharts_triggered();
 
-protected:
-    void closeEvent(QCloseEvent *event) override; // ловит нажатие на крестик
+    void on_actionClear_all_table_triggered();
 
 private:
     Ui::MainWindow *ui;
@@ -82,6 +99,12 @@ private:
     QString currentFileName;
     QString fileNameForNewOpen; // на случай Open при уже открытом файле
 
+    bool saveFile(QString &fileName);
+    void loadFile(QString &fileName);
+    void readSettings();
+    void writeSettings();
     void createLanguageMenu();
+
+    QString getCurrentFileName() const;
 };
 #endif // MAINWINDOW_H

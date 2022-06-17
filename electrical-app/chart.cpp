@@ -1,8 +1,6 @@
 #include "chart.h"
 #include "ui_chart.h"
 
-using namespace QtCharts;
-
 Chart::Chart(QMainWindow *parent, QMap<QString, double> &iCostByTypes) :
     QMainWindow(parent = nullptr),
     ui(new Ui::Chart)
@@ -14,13 +12,13 @@ Chart::Chart(QMainWindow *parent, QMap<QString, double> &iCostByTypes) :
 
     setWindowTitle(tr("Statistics"));
 
-    QBarSet *loader = new QBarSet("Загрузчик сырья");
-    QBarSet *separator = new QBarSet("Сепаратор");
-    QBarSet *sqrewExtruder = new QBarSet("Шнековый экструдер");
-    QBarSet *lineOfGranulation = new QBarSet("Линия грануляции");
-    QBarSet *meltFilter = new QBarSet("Фильтр расплава");
-    QBarSet *shreder = new QBarSet("Шредер");
-    QBarSet *transporter = new QBarSet("Ленточный транспортер");
+    QBarSet *loader              = new QBarSet("Загрузчик сырья");
+    QBarSet *separator           = new QBarSet("Сепаратор");
+    QBarSet *sqrewExtruder       = new QBarSet("Шнековый экструдер");
+    QBarSet *lineOfGranulation   = new QBarSet("Линия грануляции");
+    QBarSet *meltFilter          = new QBarSet("Фильтр расплава");
+    QBarSet *shreder             = new QBarSet("Шредер");
+    QBarSet *transporter         = new QBarSet("Ленточный транспортер");
     QBarSet *semiautomaticBlower = new QBarSet("Полуавтомат выдува ПЭТ");
 
     *loader              << costByTypes["Загрузчик сырья"];

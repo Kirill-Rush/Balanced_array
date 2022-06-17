@@ -13,5 +13,6 @@
         <file>images/great-britain.png</file>
         <file>images/russian-federation.png</file>
         <file>images/spain.png</file>
+        <file>images/clear_table.png</file>
     </qresource>
 </RCC>

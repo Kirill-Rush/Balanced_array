@@ -10,7 +10,6 @@
 #include <iostream>
 #include <QDebug>
 #include <QSettings>
-#include <QDesktopWidget>
 #include <QLibraryInfo>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -26,24 +25,33 @@ MainWindow::MainWindow(QWidget *parent)
     qApp->installTranslator(&appTranslator);
     qApp->installTranslator(&qtTranslator);
 
-    qmPath = "/Users/kirillglebov/Qt/Projects/course_work/build-course_work-Desktop_Qt_5_15_2_clang_64bit-Debug/tr"; // путь до папки с языками
+    // использую цикл для нахождения пути каталога build. В разных системах путь
+    // currentPath прописывается разный. На MacOs помимо папки build в пути
+    // присутствуют дальнейшие директории - /*.app/Contents/MacOS
+    // с помощью цикла ниже обрезается ненужная часть пути
+    qDebug() << QDir::currentPath();
+    qmPath = QDir::currentPath();
+    QString qmPathCopy = qmPath;
+    while(qmPathCopy.contains("build"))
+    {
+        qmPath = qmPathCopy;
+        qmPathCopy.truncate(qmPathCopy.lastIndexOf('/'));
+    }
+    qmPath += "/tr";
+
     createLanguageMenu();
-    // установка русского по умолчанию
-    for(int i = 0; i < 4; i++)
-        if(languageActionGroup->actions().at(i)->text().toStdString() == "&4 Русский")
-            switchLanguage(languageActionGroup->actions().at(i));
 
     readSettings(); // чтение  предыдущих настроек
 
-    ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu); // запрещает закрывать через контекст
+    ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu); // запрещает закрывать toolbar через контекст
 
-    connect(ui->actionAboutProgramm, &QAction::triggered, this, &MainWindow::openAboutProgramDialog);
-    connect(ui->actionClose, &QAction::triggered, this, &MainWindow::closeDocument);
-    connect(ui->actionClose_all, &QAction::triggered, this, &MainWindow::closeSomeDocuments);
-    //connect(ui->actionClose_all, &QAction::triggered, qApp, &QApplication::closeAllWindows);
-    connect(ui->actionEdit_row, &QAction::triggered, this, &MainWindow::editElement);     // вызов диалога редактирования
-    connect(ui->actionAdd_row, &QAction::triggered, this, &MainWindow::addElement);     // вызов диалога добавления строки
-    connect(ui->actionDelete_row, &QAction::triggered, this, &MainWindow::deleteElement);     // вызова диалога удаления строк
+    connect(ui->actionAboutProgramm, &QAction::triggered,        this, &MainWindow::openAboutProgramDialog);
+    connect(ui->actionClose,         &QAction::triggered,        this, &MainWindow::closeDocument);
+    connect(ui->actionClose_all,     &QAction::triggered,        this, &MainWindow::closeAllDocuments);
+    connect(ui->actionEdit_row,      &QAction::triggered,        this, &MainWindow::editElement); // вызов диалога редактирования
+    connect(ui->actionAdd_row,       &QAction::triggered,        this, &MainWindow::addElement); // вызов диалога добавления строки
+    connect(ui->actionDelete_row,    &QAction::triggered,        this, &MainWindow::deleteElement); // вызова диалога удаления строк
+    connect(model,                   &TableModel::signalIdError, this, &MainWindow::slotIdError); // вызов при повторяющемся ID
 
     // ниже включение ProxyModel, который сортирует значения в отображаемом tableview (в модели model ничего не меняется)
     proxymodel->setSourceModel(model); // "ресурсная" модель - наша
@@ -87,34 +95,6 @@ MainWindow::MainWindow(QWidget *parent)
                               "Шредер",\
                               "Ленточный транспортер",\
                               "Полуавтомат выдува ПЭТ"});
-
-    ui->labelFilter->setText(tr("Search for: "));
-//    ui->comboBoxFilter->addItems({tr("- Not selected -"),\
-//                                  tr("Id"),\
-//                                  tr("Name"),\
-//                                  tr("Type"),\
-//                                  tr("Perfomance"),\
-//                                  tr("Power"),\
-//                                  tr("Date of buying"),\
-//                                  tr("Date of use"),\
-//                                  tr("Cost (rub.)")});
-
-//    //Задание стиля
-//    ui->tableViewElectric->setStyleSheet(
-//                    "QTableView::row:selected:active {"
-//                    "background: rgb(191, 255,191);"
-//                    "border: 1px solid transparent;"
-//                    "selection-color: #f00;"
-//                    "}"
-
-//                    "QTableView::row:selected:!active {"
-//                    "background: rgb(191, 255,191);"
-//                    "border: 1px solid transparent;"
-//                    "selection-color: #f00;"
-//                    "}"
-//                    );
-
-        connect(model, &TableModel::signalIdError, this, &MainWindow::slotIdError);
 }
 
 MainWindow::~MainWindow()
@@ -128,13 +108,15 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+
+
 void MainWindow::openAboutProgramDialog()
 {
     DialogAboutProgramm dialog;
     dialog.exec();
 }
 
-void MainWindow::saveFile(QString &fileName)
+bool MainWindow::saveFile(QString &fileName)
 {
     QFile file(fileName);
     if(!file.open(QFile::WriteOnly | QFile::Text))
@@ -142,6 +124,7 @@ void MainWindow::saveFile(QString &fileName)
         QMessageBox::warning(this, tr("Error"), tr("Error with saving file %1: %2")
                                                     .arg(fileName)
                                                     .arg(file.errorString()));
+        return false;
     }
     QTextStream streamOut(&file);
     QList<Equipment> &elementOfEquipment = model->getListOfEquipment();
@@ -156,7 +139,21 @@ void MainWindow::saveFile(QString &fileName)
                               i.getDateOfUse() + ";" +\
                               QString::number(i.getCost()) + "\n";
     }
+
+    this->currentFileName = fileName;
+    // установка название окна как название открытого фалйа
+    int pos = fileName.lastIndexOf('.');
+    QString windowTitle = fileName;
+    windowTitle.truncate(pos);
+    windowTitle.remove(0, windowTitle.lastIndexOf('/') + 1);
+    setWindowTitle(windowTitle);
+
     file.close();
+
+    ui->statusbar->setStyleSheet("color: green;");
+    ui->statusbar->showMessage(tr("Saving successfully"), 5000);
+
+    return true;
 }
 
 void MainWindow::loadFile(QString &fileName)
@@ -197,6 +194,7 @@ void MainWindow::loadFile(QString &fileName)
     windowTitle.truncate(pos);
     windowTitle.remove(0, windowTitle.lastIndexOf('/') + 1);
     setWindowTitle(windowTitle);
+
     ui->actionCharts->setEnabled(true);
 
     file.close();
@@ -208,22 +206,9 @@ void MainWindow::editElement()
     int row = ui->tableViewElectric->selectionModel()->currentIndex().row();
     int column = ui->tableViewElectric->selectionModel()->currentIndex().column();
     QModelIndex modelIndex = proxymodel->index(row, column);
-//    double difference = proxymodel->data(modelIndex, Qt::DisplayRole).toDouble();
-
-//    if(column == 0)
-//    {
-//        unsigned int idToRemove = proxymodel->data(modelIndex).toUInt();
-//        model->removeUniqueId(idToRemove);
-//    }
 
     ui->tableViewElectric->QAbstractItemView::edit(modelIndex); // редактирование конкретной ячейки
 
-//    difference -= proxymodel->data(modelIndex, Qt::DisplayRole).toDouble();
-//    //  если значение отрицательное, значит стоимость оборудования увеличилась, и наоборот
-//    if(difference < 0)
-//        model->updateCostByTypesPlus(model->getListOfEquipment().at(row), difference);
-//    else
-//        model->updateCostByTypesMinus(model->getListOfEquipment().at(row), difference);
     model->setIsModelChanged(true);
 }
 
@@ -257,31 +242,10 @@ void MainWindow::deleteElement()
 
 void MainWindow::addElement()
 {
-/*    QModelIndex modelIndex = proxymodel->index(0, 0);
-    //int lastRow = proxymodel->rowCount(modelIndex);
     int lastRow = proxymodel->rowCount();
-    proxymodel->insertRow(lastRow);
-    ui->tableViewElectric->selectRow(lastRow);
-    ui->tableViewElectric->setFocus();
-    proxymodel->setData(model->index(lastRow, 0), "");
-    proxymodel->submit();
-    //model->submit();
-    emit(proxymodel->layoutChanged());
-    qDebug() << "All is good!";
-
-    QString  asd = "hello";
-    Equipment newel(200, "hello", 0, 120, 2, "2132131", "21231", 1231);
-    model->setValueInListOfEquipment(newel);
-    emit(model->layoutChanged());
-    */
-    int lastRow = proxymodel->rowCount();
-    //int lastRow = model->getListOfEquipment().count();
     QModelIndex modelIndex = proxymodel->index(lastRow, 0);
-    //QModelIndex modelIndex = model->index(lastRow, 0);
     proxymodel->insertRows(lastRow, 1, modelIndex);
-    //model->insertRows(lastRow, 1, modelIndex);
-    //emit(proxymodel->layoutChanged());
-    //emit(model->layoutChanged());
+    emit(proxymodel->layoutChanged());
     ui->tableViewElectric->selectRow(lastRow);
     ui->actionCharts->setEnabled(true);
 }
@@ -312,9 +276,20 @@ void MainWindow::readSettings()
     settings.beginGroup("MainWindowGeometry");
     resize(settings.value("size", QSize(650, 440)).toSize());
     // определение координат х, у, чтобы по умолчанию окно находилось в центре экрана
-    int x = (QApplication::desktop()->width() - window()->width())/2;
-    int y = (QApplication::desktop()->height() - window()->height())/2;
+    QRect screenGeometry = QApplication::primaryScreen()->geometry();
+    int x = (screenGeometry.width() - window()->width())/2;
+    int y = (screenGeometry.height() - window()->height())/2;
     move(settings.value("pos", QPoint(x, y)).toPoint());
+    QString dataOfLanguageAction = settings.value("language", "ru_RU").toString();
+
+    // установка языка через switchlanguage по dataOfLanguageAction
+    int countOfActions = languageActionGroup->actions().count();
+    for(int i = 0; i < countOfActions; i++)
+        if(languageActionGroup->actions().at(i)->data() == dataOfLanguageAction)
+        {
+            switchLanguage(languageActionGroup->actions().at(i));
+            break;
+        }
     settings.endGroup();
 }
 
@@ -324,6 +299,8 @@ void MainWindow::writeSettings()
     settings.beginGroup("MainWindowGeometry");
     settings.setValue("size", size());
     settings.setValue("pos", pos());
+    if(languageActionGroup->actions().count() > 0)
+        settings.setValue("language", languageActionGroup->checkedAction()->data().toString());
     settings.endGroup();
 }
 
@@ -335,11 +312,21 @@ QString MainWindow::getCurrentFileName() const
         return "";
 }
 
+
+
+void MainWindow::on_actionNew_triggered()
+{
+    MainWindow *newWindow = new MainWindow;
+    if(!fileNameForNewOpen.isEmpty())
+        newWindow->loadFile(fileNameForNewOpen);
+    newWindow->show();
+}
+
 void MainWindow::on_actionOpen_triggered()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), \
                                                     QDir::currentPath(),\
-                                                    tr("Text files (*.txt *.bat)"), \
+                                                    tr("Text files (*.txt *.bat *.db)"), \
                                                     nullptr,\
                                                     QFileDialog::DontUseNativeDialog);
     // если открыт документ (есть данные в модели), создается новое окно
@@ -354,31 +341,62 @@ void MainWindow::on_actionOpen_triggered()
     return;
 }
 
-void MainWindow::on_actionSave_triggered()
+bool MainWindow::on_actionSave_triggered()
 {
     QString fileName = getCurrentFileName();
     if(fileName.isEmpty())
     {
-        on_actionSave_as_triggered();
-        return;
+        return on_actionSave_as_triggered();
     }
-    saveFile(fileName);
+    return saveFile(fileName);
 }
 
-void MainWindow::on_actionSave_as_triggered()
+bool MainWindow::on_actionSave_as_triggered()
 {
-    QString fileName = QFileDialog::getSaveFileName(this);
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save file"), \
+                                                    QDir::currentPath(),\
+                                                    tr("Text files (*.txt *.bat *.db)"), \
+                                                    nullptr,\
+                                                    QFileDialog::DontUseNativeDialog);
     if(!fileName.isEmpty())
-        saveFile(fileName);
+        return saveFile(fileName);
+    return false;
 }
 
-
-void MainWindow::on_actionNew_triggered()
+void MainWindow::closeDocument()
 {
-    MainWindow *newWindow = new MainWindow;
-    if(!fileNameForNewOpen.isEmpty())
-        newWindow->loadFile(fileNameForNewOpen);
-    newWindow->show();
+    QWidget::close();
+}
+
+void MainWindow::closeAllDocuments()
+{
+    QMessageBox::StandardButton result = QMessageBox::question(this,\
+                                                               tr("Exit"),\
+                                                               tr("Changes will be lost.\nClose?"),\
+                                                               QMessageBox::Yes |\
+                                                               QMessageBox::No);
+    if(result == QMessageBox::Yes)
+        qApp->closeAllWindows();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if(model->getIsModelChanged())
+    {
+        QMessageBox::StandardButton result = QMessageBox::question(this,\
+                                                                   tr("Saving"),\
+                                                                   tr("There are unsaved changes.\nSave?"),\
+                                                                   QMessageBox::Yes |\
+                                                                   QMessageBox::No);
+        if(result == QMessageBox::Yes)
+            if(!on_actionSave_triggered())
+            {
+                event->ignore();
+                return;
+            }
+
+    }
+    event->accept();
 }
 
 
@@ -408,12 +426,6 @@ void MainWindow::on_lineSearch_textChanged(const QString &arg1)
     ui->tableViewElectric->resizeRowsToContents();
 }
 
-void MainWindow::closeEvent(QCloseEvent *event)
-{
-    Q_UNUSED(event);
-    closeDocument();
-}
-
 // выделяет строку, даже если после первого нажатия один раз нажать на ячейку снова
 void MainWindow::on_tableViewElectric_clicked(const QModelIndex &index)
 {
@@ -424,34 +436,6 @@ void MainWindow::on_tableViewElectric_clicked(const QModelIndex &index)
 void MainWindow::on_tableViewElectric_pressed(const QModelIndex &index)
 {
     ui->tableViewElectric->selectRow(index.row());
-}
-
-
-void MainWindow::closeDocument()
-{
-    if(model->getIsModelChanged())
-    {
-        QMessageBox::StandardButton result = QMessageBox::question(this,\
-                                                                   tr("Saving"),\
-                                                                   tr("There are unsaved changes.\nSave?"),\
-                                                                   QMessageBox::Yes |\
-                                                                   QMessageBox::No);
-        if(result == QMessageBox::Yes)
-            on_actionSave_triggered();
-
-    }
-    QWidget::close();
-}
-
-void MainWindow::closeSomeDocuments()
-{
-    QMessageBox::StandardButton result = QMessageBox::question(this,\
-                                                               tr("Exit"),\
-                                                               tr("Changes will be lost.\nClose?"),\
-                                                               QMessageBox::Yes |\
-                                                               QMessageBox::No);
-    if(result == QMessageBox::Yes)
-        qApp->closeAllWindows();
 }
 
 void MainWindow::createLanguageMenu()
@@ -520,6 +504,7 @@ void MainWindow::switchLanguage(QAction *action)
     else if(locale.toStdString() == "fr")
         ui->menuLanguages->setIcon(QIcon(":/pictures/images/france.png"));
 
+    action->setChecked(true);
     ui->retranslateUi(this);
 }
 
@@ -527,7 +512,7 @@ void MainWindow::slotIdError(const unsigned int &id)
 {
     QMessageBox::critical(this,\
                           tr("Id error"),\
-                          tr("Id ") + id + tr("already exists. Enter another id"),\
+                          tr("Id ") + QString::number(id) + tr("already exists. Enter another id"),\
                           QMessageBox::Ok);
 }
 
@@ -537,12 +522,12 @@ void MainWindow::on_actionToolbar_triggered()
     if(ui->toolBar->isHidden())
     {
         ui->toolBar->show();
-        ui->actionToolbar->setText("Hide toolbar");
+        ui->actionToolbar->setText(tr("Hide toolbar"));
     }
     else
     {
         ui->toolBar->hide();
-        ui->actionToolbar->setText("Show toolbar");
+        ui->actionToolbar->setText(tr("Show toolbar"));
     }
 }
 
@@ -550,7 +535,22 @@ void MainWindow::on_actionToolbar_triggered()
 void MainWindow::on_actionCharts_triggered()
 {
     Chart *newChart = new Chart(this, model->getCostByTypes());
-    //newChart->updateCostByTypes(model->getCostByTypes());
     newChart->show();
+}
+
+
+void MainWindow::on_actionClear_all_table_triggered()
+{
+    QMessageBox::StandardButton result = QMessageBox::question(this, \
+                                                               tr("Clearing"), \
+                                                               tr("Clear all table?"), \
+                                                               QMessageBox::No | \
+                                                               QMessageBox::Yes);
+    if(result == QMessageBox::Yes)
+    {
+        while(proxymodel->rowCount() > 0)
+            proxymodel->removeRow(0);
+        proxymodel->layoutChanged();
+    }
 }
 
